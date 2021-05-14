@@ -100,3 +100,9 @@ Neste exemplo, vamos considerar que dois números de máquina são iguais se nã
 ## O que deve ser entregue
 
 Devem ser entregues os códigos-fonte do programa (em linguagem C), makefile e arquivos de teste usados pelo aluno. Todos estes itens devem ser compactados em um arquivo do tipo .tar , .tgz ou .zip .
+
+## Referências
+ - https://en.cppreference.com/w/c/numeric/math/nextafter
+ - https://en.cppreference.com/w/c/numeric/fenv
+ - http://www.cplusplus.com/reference/cmath/nexttoward/
+ 
