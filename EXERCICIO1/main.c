@@ -1,6 +1,7 @@
 /*  Jorge Lucas Vicilli Jabczenski  */
+/*              jlvj19              */
 /*            GRR20190372           */
-/*             14/05/2021           */
+/*             14/5/2021            */
 /* Exercício 1 - Análise Intervalar */
 
 #include <stdio.h>
@@ -8,12 +9,20 @@
 #include <float.h>
 #include <math.h>
 
-#pragma STDC FENV_ACCESS ON
+/* Maior anterior ou igual número representavel */
+float 
+maiorAnterior(float n)
+{
+    return nextafterf(n, n-1);
+}
 
-/* Menor ou igual número representavel */
+/* Menos posterior ou igual número representavel */
 
-
-/* Maior ou igual número representavel */
+float 
+menorPosterior(float n)
+{
+    return nextafterf(n, n+1);
+}
 
 /* Representar um número como IEE754   */
 
@@ -21,9 +30,20 @@
 typedef struct 
 intervalo
 {
+    char  rot[5];
     float min;
     float max;
 } intervalo_t;
+
+typedef struct
+conta 
+{
+    char dest[5];
+    char igual;
+    char rot1[5];
+    char op;
+    char rot2[5];
+} conta_t;
 
 int
 main()
@@ -32,39 +52,32 @@ main()
     int nrInputs, nrOperacoes;
     float *inputs;
     intervalo_t *intervalos;
-
-
+    conta_t *contas;
 
     scanf("%d\n%d", &nrInputs, &nrOperacoes);
+    printf("Inputs: %d | Operacoes: %d\n", nrInputs, nrOperacoes);
 
     
-    /* Aloca espaço necessário para os inputs e suas representações em intervalos */
+    /* 
+    Aloca espaço necessário para os inputs, suas representações em intervalos,
+    contas e resultados
+    */
     inputs = (float *) malloc (nrInputs * sizeof(float));
     intervalos = (intervalo_t*) malloc (nrInputs * sizeof(intervalo_t));
+    contas = (conta_t *) malloc (nrOperacoes * sizeof(conta_t));
 
+    /* Lê todas as entradas */
     for (int i = 0; i < nrInputs; i++)
         scanf("%f", &inputs[i]);
 
-    intervalos[0].max = (float) nextafter(inputs[0],inputs[0]+1);
-    
-    
-    for (int i = 0; i < nrInputs; i++) printf("%.100f ", inputs[i]);
-    putchar('\n');
-    printf("%.100f", intervalos[0].max);
-    putchar('\n');
-    printf("%.100f", nextafter(inputs[0], inputs[0]-1));
-    putchar('\n');
-
-    if (nextafter(inputs[0], inputs[0]-1) == (nextafter(inputs[0],inputs[0]+1)))
+    /* Calcula os intervalos*/
+    for (int i = 0; i < nrInputs; i++)
     {
-        printf("iguais\n");
-    } else {
-        printf("nao\n");
+        intervalos[i].min = maiorAnterior(inputs[i]);
+        intervalos[i].max = menorPosterior(inputs[i]);
     }
-
-    printf("Inputs: %d | Operacoes: %d\n", nrInputs, nrOperacoes);
-
-
+    
+    
     return 0;
 }
 
