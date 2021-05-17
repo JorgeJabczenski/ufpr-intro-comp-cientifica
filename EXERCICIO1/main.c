@@ -9,6 +9,7 @@
 #include <float.h>
 #include <math.h>
 #include <fenv.h>
+#include <stdint.h>
 
 #define DEBUG 
 
@@ -22,22 +23,23 @@
 
 /* Tipo de estrutura para representar um intervalo */
 typedef struct 
-intervalo
 {
-    char  rot[5];
     float min;
     float max;
 } intervalo_t;
 
-typedef struct
-conta 
+typedef union
 {
-    char dest[5];
-    char igual;
-    char rot1[5];
-    char op;
-    char rot2[5];
-} conta_t;
+    int32_t i;
+    float f;
+    struct
+    {
+        uint32_t mantissa : 23;
+        uint32_t exponent : 8;
+        uint32_t sign : 1;
+    } parts;
+} Float_t;
+
 
 /**************************************************/
 /*                    OPERAÇÕES                   */
@@ -88,7 +90,7 @@ soma(intervalo_t i1, intervalo_t i2)
 
 /* SUBTRAÇÃO */
 intervalo_t
-subtacao(intervalo_t i1, intervalo_t i2)
+subtracao(intervalo_t i1, intervalo_t i2)
 {
     intervalo_t resultado;
     float subMin, subMax;
@@ -114,12 +116,36 @@ multiplicacao(intervalo_t i1, intervalo_t i2)
 
     resultado.min = maiorAnterior(resMin);
     resultado.max = menorPosterior(resMax);
-    
+
     return resultado;
 }
 
 /* DIVISÃO */
-/* TO-DO */
+/* TO-DO 
+*/
+intervalo_t
+divisao(intervalo_t i1, intervalo_t i2)
+{
+    intervalo_t resultado, i2Inverso;
+
+    if (i2.min != 0 && i1.max != 0){
+
+        i2Inverso.min = maiorAnterior(1/i2.min);
+        i2Inverso.max = menorPosterior(1/i2.max);
+
+        resultado = multiplicacao(i1,i2Inverso);
+    }
+
+    return resultado;
+
+}
+
+/* Confere se o intervalo é unitário */
+int
+isUnitario(intervalo_t intervao)
+{
+    return 0;
+}
 
 /**************************************************/
 /*                      MAIN                      */
@@ -129,47 +155,85 @@ main()
 {
     /* Variáveis */
     int nrInputs, nrOperacoes;
-    float *inputs;
     intervalo_t *intervalos;
-    conta_t *contas;
 
     /**************************************/
-    /* Le a quandiade de inputs e operações */
-    scanf("%d\n%d", &nrInputs, &nrOperacoes);
-
-    #ifdef DEBUG
-    printf("Inputs: %d | Operacoes: %d\n", nrInputs, nrOperacoes);
-    #endif
+    /* Le a quantidade de inputs e operações */
+    scanf("%d\n%d\n", &nrInputs, &nrOperacoes);
 
     /* 
     Aloca espaço necessário para os inputs, suas representações em intervalos,
     contas e resultados
     */
-    inputs = (float *) malloc (nrInputs * sizeof(float));
-    intervalos = (intervalo_t*) malloc (nrInputs * sizeof(intervalo_t));
-    contas = (conta_t *) malloc (nrOperacoes * sizeof(conta_t));
+    intervalos = (intervalo_t*) malloc ((nrInputs + nrOperacoes) * sizeof(intervalo_t));
 
-    /* Lê todas as entradas */
-    for (int i = 0; i < nrInputs; i++)
-        scanf("%f", &inputs[i]);
-
-    /* Lê todas as operações */
-    // for (int i = 0; i < nrOperacoes; i++)
-    //     scanf("%f", &contas[i]);
-
-    /* Calcula os intervalos*/
+    /* Lê todas as entradas, já calculando os intervalos */
     for (int i = 0; i < nrInputs; i++)
     {
-        intervalos[i].min = maiorAnterior(inputs[i]);
-        intervalos[i].max = menorPosterior(inputs[i]);
+        int indice;
+        float entrada;
+        scanf("%*c %d %f\n",&indice, &entrada);
+
+        printf("---> %d | %1.8e\n", indice, entrada);
+
+        intervalos[indice-1].min = maiorAnterior(entrada);
+        intervalos[indice-1].max = menorPosterior(entrada);
     }
 
-    printf("-------------\n%.20g\n%.20g\n%.20g\n\n%.20g\n%.20g\n", inputs[0],intervalos[0].min, intervalos[0].max, nextafterf(inputs[0],inputs[0]-1),nextafterf(inputs[0],inputs[0]+1));
+    /* Lê todas as operações */
+    for (int i = 0; i < nrOperacoes; i++)
+    {
+        int indice1, indice2, destino;
+        char op;
+        //scanf("%s %*c %s %c %s", contas[i].dest, contas[i].rot1, &contas[i].op, contas[i].rot2);
+        scanf("%*c %d %*c %*c %d %c %*c %d\n",&destino, &indice1, &op, &indice2);
+        
+        intervalo_t resultado;
+        
+        switch(op)
+        {
+            case '+':
+                resultado = soma(intervalos[indice1-1], intervalos[indice2-1]);
+            break;
 
-    printf("\n%.20g\n",maiorAnterior(intervalos[0].max));
-    printf("\n%.20g\n",menorPosterior(intervalos[0].min));
-    
-    
+            case '-':
+                resultado = subtracao(intervalos[indice1-1], intervalos[indice2-1]);
+            break;
+
+            case '*':
+            resultado = multiplicacao(intervalos[indice1-1], intervalos[indice2-1]);
+            break;
+
+            case '/':
+            resultado = divisao(intervalos[indice1-1], intervalos[indice2-1]);
+            break;
+        }
+
+        printf("%d = %d %c %d\n",destino, indice1, op, indice2);        
+        intervalos[destino-1] = resultado;
+
+
+    }
+
+    /* Imprime os intervalos */
+    for(int i = 0; i < nrInputs + nrOperacoes; i++)
+    {
+        printf("X%d = [\t% 1.8e,\t% 1.8e]\n",i+1, intervalos[i].min, intervalos[i].max);
+    }
+
+
+    /* Confere se as contas resultaram em intervalos unitários ou não */
+    printf("Não unitários\n");
+    for (int i = 0; i < nrOperacoes; i++)
+    {
+        if (!isUnitario(intervalos[nrInputs+i]))
+        {
+            printf("X%d = [\t% 1.8e,\t% 1.8e]\n",nrInputs+i+1, intervalos[nrInputs+i].min, intervalos[nrInputs+i].max);
+        }
+    }
+
+
+
     return 0;
 }
 
