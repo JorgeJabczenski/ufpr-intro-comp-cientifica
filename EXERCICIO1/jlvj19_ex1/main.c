@@ -161,7 +161,7 @@ isValido(intervalo_t intervalo)
     return 1;
 }
 
-/* Confere se o intervalo é unitário (min == max) ou não (min < max) */
+/* Confere se o intervalo é unitário (min == max) ou não (min < max) ou inválido (min > max)*/
 int
 isUnitario(intervalo_t intervalo)
 {
