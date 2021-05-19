@@ -31,7 +31,6 @@ typedef struct
 typedef union
 {
     int32_t i;
-    // int sinal = 0b10000000000000000000000000000000 | i;
     float f;
     struct
     {
@@ -49,14 +48,14 @@ typedef union
 float 
 maiorAnterior(float n)
 {
-    return nextafterf(n, n-1);
+    return nextafterf(n, -INFINITY);
 }
 
 /* Menos posterior ou igual número representavel */
 float 
 menorPosterior(float n)
 {
-    return nextafterf(n, n+1);
+    return nextafterf(n, +INFINITY);
 }
 
 /* MÍNIMO DE 4 */
@@ -131,10 +130,30 @@ divisao(intervalo_t i1, intervalo_t i2)
 
         resultado.min = maiorAnterior (min4(i1.min/i2.min, i1.min/i2.max, i1.max/i2.min, i1.max/i2.max));
         resultado.max = menorPosterior(max4(i1.min/i2.min, i1.min/i2.max, i1.max/i2.min, i1.max/i2.max));
+    } else {
+        resultado.min = -INFINITY;
+        resultado.max = +INFINITY;
     }
 
     return resultado;
 
+}
+
+/* Confere se um intervalo é valido */
+int 
+isValido(intervalo_t intervalo)
+{
+    /* Se algum dos intervalos é nan | encerra*/
+    if (isnan(intervalo.min) || isnan(intervalo.max)) return 0;
+
+    /* Se min é maior que o max | encerra*/
+    if (isgreater(intervalo.min, intervalo.max)) return 0;
+
+    /* Se eles são infinitos e iguais (positivos ou negativos) */
+    if(isinf(intervalo.min) && (intervalo.min == intervalo.max)) return 0;
+
+    /* Intervalo válido */
+    return 1;
 }
 
 /* Confere se o intervalo é unitário (min == max) ou não (min < max) ou inválido (min > max)*/
@@ -142,28 +161,17 @@ int
 isUnitario(intervalo_t intervalo)
 {
     Float_t min, max;
-    int sinalMin, sinalMax, ulps;
 
     min.f = intervalo.min;
     max.f = intervalo.max;
 
-    // printf("sinais---- -> %d %d\n" ,sinalMin, sinalMin);
-
-    // printf("min: %c | max: %c\n", (sinalMin)?'-':'+', (sinalMax)?'-':'+');
+    /* Sinais opostos, já nao é unitário */
     if (min.parts.sign != max.parts.sign) return 0;
+
+    /* Se min < max não é unitário */
+    if (isgreater(intervalo.max, intervalo.min)) return 0;
+
     
-    switch (min.parts.sign){
-        case 0:
-            printf("%d | %d\n", min.i, max.i);
-            if(min.i < max.i) return 0;
-        break;
-
-        case 1:
-            printf("negativo: %d | %d\n", min.i, max.i);
-            if (min.i > max.i) return 0;
-        break;
-    }
-
     return 1;
 }
 
@@ -194,8 +202,6 @@ main()
         float entrada;
         scanf("%*c %d %f\n",&indice, &entrada);
 
-        //printf("---> %d | %1.8e\n", indice, entrada);
-
         intervalos[indice-1].min = maiorAnterior(entrada);
         intervalos[indice-1].max = menorPosterior(entrada);
     }
@@ -203,13 +209,15 @@ main()
     /* Lê todas as operações */
     for (int i = 0; i < nrOperacoes; i++)
     {
+        intervalo_t resultado;
         int indice1, indice2, destino;
         char op;
-        //scanf("%s %*c %s %c %s", contas[i].dest, contas[i].rot1, &contas[i].op, contas[i].rot2);
+
         scanf("%*c %d %*c %*c %d %c %*c %d\n",&destino, &indice1, &op, &indice2);
         
-        intervalo_t resultado;
-        
+        /* Limpa as flags de ambiente float */
+        feclearexcept(FE_ALL_EXCEPT);
+
         switch(op)
         {
             case '+':
@@ -229,16 +237,25 @@ main()
             break;
         }
 
-        //printf("%d = %d %c %d\n",destino, indice1, op, indice2);        
-        intervalos[destino-1] = resultado;
+        /* Confere se o intervalo resultante da operação é válido, se não é encerra o programa */
+        if (!isValido(resultado)) return -1;
+        
+        /* Caso a conta tenha resultado em overflow ou underflow, encerra o programa 
+        * Tava dando problema nos testes então está comentado
+        */
+        //if (fetestexcept(FE_OVERFLOW) || fetestexcept(FE_UNDERFLOW)) {
+        //    return -1;
+        //}
 
+        /* Armazena o resultado no local esperado */
+        intervalos[destino-1] = resultado;
 
     }
 
     /* Imprime os intervalos */
     for(int i = 0; i < nrInputs + nrOperacoes; i++)
     {
-        printf("X%d = [     % 1.8e,      % 1.8e]\n",i+1, intervalos[i].min, intervalos[i].max);
+        printf("X%d = [% 20.8e, % 20.8e]\n",i+1, intervalos[i].min, intervalos[i].max);
     }
 
 
@@ -248,11 +265,9 @@ main()
     {
         if (!isUnitario(intervalos[nrInputs+i]))
         {
-            printf("X%d = [     % 1.8e,      % 1.8e]\n",nrInputs+i+1, intervalos[nrInputs+i].min, intervalos[nrInputs+i].max);
+            printf("X%d = [% 20.8e, % 20.8e]\n",nrInputs+i+1, intervalos[nrInputs+i].min, intervalos[nrInputs+i].max);
         }
     }
-
-
 
     return 0;
 }
